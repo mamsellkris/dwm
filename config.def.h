@@ -8,10 +8,16 @@ static const char normfgcolor[]     = "#bbbbbb";
 static const char selbordercolor[]  = "#005577";
 static const char selbgcolor[]      = "#005577";
 static const char selfgcolor[]      = "#eeeeee";
+static const char urgbordercolor[]  = "#ff0000";
+static const char urgbgcolor[]      = "#ff0000";
+static const char urgfgcolor[]      = "#ff0000";
 static const unsigned int borderpx  = 1;        /* border pixel of windows */
 static const unsigned int snap      = 32;       /* snap pixel */
 static const Bool showbar           = True;     /* False means no bar */
 static const Bool topbar            = True;     /* False means bottom bar */
+
+enum { UrgentNoTrans = 0, UrgentTransBG = 1, UrgentTransFG = 2 };
+static const int urgenttrans = UrgentTransBG;
 
 /* tagging */
 static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };

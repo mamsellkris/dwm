@@ -101,6 +101,7 @@ typedef struct {
 	int x, y, w, h;
 	unsigned long norm[ColLast];
 	unsigned long sel[ColLast];
+	unsigned long urg[ColLast];
 	Drawable drawable;
 	GC gc;
 	struct {
@@ -187,6 +188,7 @@ static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
 static unsigned long getcolor(const char *colstr);
+static unsigned long *getcolors(int isselected, int urgent);
 static Bool getrootptr(int *x, int *y);
 static long getstate(Window w);
 static Bool gettextprop(Window w, Atom atom, char *text, unsigned int size);
@@ -730,10 +732,10 @@ drawbar(Monitor *m) {
 	dc.x = 0;
 	for(i = 0; i < LENGTH(tags); i++) {
 		dc.w = TEXTW(tags[i]);
-		col = m->tagset[m->seltags] & 1 << i ? dc.sel : dc.norm;
-		drawtext(tags[i], col, urg & 1 << i);
+		col = getcolors(m->tagset[m->seltags] & 1 << i, urg & 1 << i);
+		drawtext(tags[i], col, False);
 		drawsquare(m == selmon && selmon->sel && selmon->sel->tags & 1 << i,
-		           occ & 1 << i, urg & 1 << i, col);
+		           occ & 1 << i, False, col);
 		dc.x += dc.w;
 	}
 	dc.w = blw = TEXTW(m->ltsymbol);
@@ -934,6 +936,22 @@ getcolor(const char *colstr) {
 	if(!XAllocNamedColor(dpy, cmap, colstr, &color, &color))
 		die("error, cannot allocate color '%s'\n", colstr);
 	return color.pixel;
+}
+
+unsigned long *
+getcolors(int isselected, int isurgent) {
+	unsigned long *col = isselected ? dc.sel : dc.norm;
+
+	if (isurgent) {
+		if (urgenttrans & UrgentTransBG)
+			dc.urg[ColBG] = col[ColBG];
+		if (urgenttrans & UrgentTransFG)
+			dc.urg[ColFG] = col[ColFG];
+
+		col = dc.urg;
+	}
+
+	return col;
 }
 
 Bool
@@ -1618,6 +1636,9 @@ setup(void) {
 	dc.sel[ColBorder] = getcolor(selbordercolor);
 	dc.sel[ColBG] = getcolor(selbgcolor);
 	dc.sel[ColFG] = getcolor(selfgcolor);
+	dc.urg[ColBorder] = getcolor(urgbordercolor);
+	dc.urg[ColBG] = getcolor(urgbgcolor);
+	dc.urg[ColFG] = getcolor(urgfgcolor);
 	dc.drawable = XCreatePixmap(dpy, root, DisplayWidth(dpy, screen), bh, DefaultDepth(dpy, screen));
 	dc.gc = XCreateGC(dpy, root, 0, NULL);
 	XSetLineAttributes(dpy, dc.gc, 1, LineSolid, CapButt, JoinMiter);
@@ -2031,8 +2052,12 @@ updatewmhints(Client *c) {
 			wmh->flags &= ~XUrgencyHint;
 			XSetWMHints(dpy, c->win, wmh);
 		}
-		else
+		else {
 			c->isurgent = (wmh->flags & XUrgencyHint) ? True : False;
+				if (c->isurgent)
+					XSetWindowBorder(dpy, c->win, dc.urg[ColBorder]);
+		}
+
 		if(wmh->flags & InputHint)
 			c->neverfocus = !wmh->input;
 		else
